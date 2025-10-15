@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Masuk - KABUPATEN PARIGI MOUTONG</title>
+    <!-- CDN Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CDN Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-green': '#10B981', // Warna hijau utama
+                        'custom-green-dark': '#047857', // Warna hijau lebih tua
+                        'custom-red': '#EF4444',
+                        'custom-yellow': '#FACC15', // Kuning cerah untuk tombol
+                        'input-bg': '#F3F4F6', // Latar belakang input abu-abu muda
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FFFFFF;
+            overflow-x: hidden; 
+        }
+
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #10B981; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.6s ease-out; 
+            overflow: hidden;
+        }
+        
+        #splash-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        @keyframes logo-bounce {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .logo-splash {
+            animation: logo-bounce 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        #login-content {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(20px); 
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        
+        #login-content.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .green-container {
+            background-color: #10B981;
+            border-bottom-left-radius: 40px;
+            border-bottom-right-radius: 40px;
+            min-height: 85vh; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .input-style {
+            background-color: white; 
+            border: none;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+        
+        .rounded-pill {
+            border-radius: 9999px;
+        }
+
+        /* Gaya untuk Modal Lupa Password */
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+        .modal-content {
+            transition: transform 0.3s ease;
+            transform: scale(0.95);
+        }
+        .modal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal.visible .modal-content {
+            transform: scale(1);
+        }
+        
+    </style>
+</head>
+<body>
+
+    <!-- 1. LAYAR PEMBUKA (SPLASH SCREEN) -->
+    <div id="splash-screen">
+        <img src="assets/logo_kabupaten.png" alt="Logo Kabupaten" style="width: 62px; height: 74px;" class="mb-6 logo-splash max-w-full h-auto">
+        <div class="text-xl font-bold text-white">KABUPATEN PARIGI MOUTONG</div>
+    </div>
+
+    <!-- 2. KONTEN MASUK (LOGIN) -->
+    <div id="login-content" class="flex flex-col min-h-screen">
+        <div class="px-4 w-full max-w-md mx-auto"> 
+            <div class="green-container text-white">
+                <div class="p-8 flex flex-col items-center w-full flex-grow">
+                    <img src="assets/logo_kabupaten.png" alt="Logo Kabupaten" style="width: 62px; height: 74px;" class="mt-10 mb-2 max-w-full h-auto">
+                    <h2 class="text-white text-base font-bold tracking-widest uppercase mt-2">KABUPATEN PARIGI MOUTONG</h2>
+                    <div class="mt-8 text-center mb-10">
+                        <h1 class="text-3xl font-bold text-white tracking-wider">SELAMAT DATANG</h1>
+                        <p class="text-gray-200 text-sm mt-1">Aplikasi Gerbang Desa Indonesia</p>
+                    </div>
+
+                    <form id="login-form" class="w-full">
+                        <div class="mb-4">
+                            <label for="username" class="block text-sm font-bold text-white mb-2">User</label>
+                            <input type="text" id="username" name="username" required class="w-full px-4 py-3 input-style rounded-2xl focus:ring-custom-green-dark focus:border-custom-green-dark outline-none text-gray-800 transition duration-150">
+                            <p id="not-registered-message" class="text-custom-red text-xs mt-1 font-semibold hidden">Pesan Error</p>
+                        </div>
+                        <div class="mb-6">
+                            <label for="password" class="block text-sm font-bold text-white mb-2">Password</label>
+                            <div class="relative">
+                                <input type="password" id="password" name="password" required class="w-full pr-10 pl-4 py-3 input-style rounded-2xl focus:ring-custom-green-dark focus:border-custom-green-dark outline-none text-gray-800 transition duration-150">
+                                <button type="button" id="toggle-password" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 p-1" aria-label="Tampilkan kata sandi">
+                                    <i data-lucide="eye" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <div class="flex justify-end mt-2">
+                                <a href="#" id="forgot-password-link" class="text-xs font-semibold text-white/90 hover:text-white transition duration-200 underline">Lupa Password?</a>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-custom-yellow text-gray-900 font-extrabold text-lg py-3 rounded-xl hover:bg-yellow-500 transition duration-300 shadow-xl shadow-gray-900/10">Masuk</button>
+                    </form>
+
+                    <button onclick="window.location.href='#'" class="w-full bg-custom-green-dark text-white font-bold text-lg py-3 mt-6 rounded-pill hover:bg-custom-green-dark/80 transition duration-300 shadow-xl shadow-gray-900/10 flex items-center justify-center space-x-2">
+                        <img src="assets/WA.png" alt="WhatsApp Icon" class="w-6 h-6">
+                        <span>Hubungi Admin</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex-shrink-0 text-center text-gray-700 text-sm mt-10 mb-8 w-full">
+            Version 1.0
+        </div>
+    </div>
+
+    <!-- 3. MODAL LUPA PASSWORD -->
+    <div id="forgot-password-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-[999] flex items-center justify-center p-4 opacity-0 pointer-events-none">
+        <div class="modal-content bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onclick="event.stopPropagation()">
+            <div id="forgot-password-form-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-900">Lupa Password</h3>
+                    <button onclick="closeForgotPasswordModal()" class="text-gray-400 hover:text-gray-700 text-2xl font-light">&times;</button>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">Masukkan email Anda untuk menerima instruksi reset password.</p>
+                <form id="forgot-password-form">
+                    <input type="email" id="forgot-email" placeholder="contoh@email.com" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-custom-green focus:border-custom-green transition">
+                    <button type="submit" class="mt-4 w-full py-2 bg-custom-green text-white font-bold rounded-lg hover:bg-custom-green-dark transition">Kirim Instruksi</button>
+                </form>
+            </div>
+            <div id="forgot-password-success" class="text-center hidden">
+                <div class="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <i data-lucide="mail-check" class="w-8 h-8 text-custom-green"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900">Periksa Email Anda</h3>
+                <p class="text-sm text-gray-600 mt-2">Jika email terdaftar, instruksi untuk mengatur ulang kata sandi telah dikirimkan.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // --- Logika Splash Screen (Telah Diperbarui) ---
+        window.addEventListener('load', () => {
+            const splashScreen = document.getElementById('splash-screen');
+            const loginContent = document.getElementById('login-content');
+
+            // Cek jika ada hash di URL (misalnya #login-form)
+            if (window.location.hash) {
+                // Jika ada, lewati splash screen
+                if(splashScreen) splashScreen.remove();
+                loginContent.classList.add('active');
+                document.body.style.overflow = 'auto';
+            } else {
+                // Jika tidak ada, jalankan animasi splash screen normal
+                setTimeout(() => {
+                    splashScreen.classList.add('hidden');
+                    setTimeout(() => {
+                        loginContent.classList.add('active');
+                        setTimeout(() => {
+                            if(splashScreen) splashScreen.remove();
+                            document.body.style.overflow = 'auto';
+                        }, 800);
+                    }, 600); 
+                }, 2000); 
+            }
+        });
+
+        // --- Logika Tampilkan/Sembunyikan Password ---
+        const togglePassword = document.getElementById('toggle-password');
+        const passwordInput = document.getElementById('password');
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            const icon = togglePassword.querySelector('i');
+            icon.setAttribute('data-lucide', type === 'text' ? 'eye-off' : 'eye');
+            lucide.createIcons();
+        });
+
+        // --- Logika Modal Lupa Password ---
+        const forgotPasswordModal = document.getElementById('forgot-password-modal');
+        const forgotPasswordLink = document.getElementById('forgot-password-link');
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            forgotPasswordModal.classList.add('visible');
+            forgotPasswordModal.querySelector('#forgot-password-form-container').classList.remove('hidden');
+            forgotPasswordModal.querySelector('#forgot-password-success').classList.add('hidden');
+        });
+        
+        function closeForgotPasswordModal() {
+            forgotPasswordModal.classList.remove('visible');
+        }
+
+        forgotPasswordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value;
+            if (email) {
+                console.log(`Simulasi: Mengirim email reset password ke ${email}`);
+                
+                forgotPasswordModal.querySelector('#forgot-password-form-container').classList.add('hidden');
+                const successDiv = forgotPasswordModal.querySelector('#forgot-password-success');
+                successDiv.classList.remove('hidden');
+                lucide.createIcons();
+
+                setTimeout(() => {
+                    closeForgotPasswordModal();
+                }, 4000);
+            }
+        });
+
+
+        // --- Logika Simulasi Masuk (Login) ---
+        const loginForm = document.getElementById('login-form');
+        const notRegisteredMessage = document.getElementById('not-registered-message'); 
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            notRegisteredMessage.classList.add('hidden');
+
+            if (username === 'fuad' && password === '123456') {
+                console.log('Masuk berhasil! Mengalihkan ke dashboard...');
+                setTimeout(() => {
+                    window.location.href = 'apk_dashboard.html'; 
+                }, 500);
+            } else {
+                notRegisteredMessage.textContent = 'Nama Pengguna atau Kata Sandi salah.'; 
+                notRegisteredMessage.classList.remove('hidden'); 
+            }
+        });
+    </script>
+</body>
+</html>

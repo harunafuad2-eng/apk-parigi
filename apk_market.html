@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Utama</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'custom-green': '#10B981', 
+                        'custom-red': '#EF4444', 
+                        'custom-green-dark': '#16A34A',
+                        'custom-overlay': 'rgba(0, 0, 0, 0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            padding-top: 1rem;
+            background-color: #ffffff;
+        }
+        #item-modal { transition: opacity 0.3s ease; }
+        #modal-content { transition: transform 0.3s ease-out; }
+        
+        /* Gaya untuk Notifikasi Toast (Telah Diperbarui) */
+        #toast-notification {
+            opacity: 0;
+            transform: translateX(calc(100% + 1.25rem)); /* Mendorong sepenuhnya keluar layar (1.25rem = right-5) */
+            pointer-events: none;
+            transition: transform 0.4s ease-in-out, opacity 0.4s ease-in-out;
+        }
+        #toast-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+        
+        .category-btn.active {
+            background-color: #10B981;
+            color: white;
+            font-weight: 600;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+        .shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        
+        #category-container::-webkit-scrollbar { 
+            height: 4px; 
+        }
+        #category-container::-webkit-scrollbar-track { 
+            background-color: #f0f0f0; 
+        }
+        #category-container::-webkit-scrollbar-thumb {
+            background-color: transparent;
+            border-radius: 10px;
+        }
+        #category-container:hover::-webkit-scrollbar-thumb {
+            background-color: #10B981;
+        }
+        /* Banner Slider Styles */
+        .slide {
+            flex-shrink: 0;
+            width: 100%;
+        }
+        .slider-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .slider-dot.active {
+            background-color: white;
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen">
+
+    <div id="toast-notification" class="fixed top-5 right-5 bg-custom-green-dark text-white py-2 px-4 rounded-lg shadow-lg z-50">
+        <p id="toast-message"></p>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-4 pt-8">
+        
+        <header class="flex justify-between items-center mb-4"> 
+            <button onclick="window.location.href = 'apk_dashboard.html';" class="text-custom-green text-3xl font-bold rounded-full p-1 hover:bg-gray-100 transition">&larr;</button>
+            <div class="text-2xl font-normal text-gray-800">Market</div>
+            <div class="w-8"></div> 
+        </header>
+
+        <!-- Banner Slider -->
+        <div class="relative w-full mx-auto mb-6 overflow-hidden rounded-xl shadow-lg" id="banner-slider">
+            <div class="flex transition-transform duration-500 ease-in-out" id="slider-track">
+                <!-- Slides will be injected by JS -->
+            </div>
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2" id="slider-dots">
+                <!-- Dots will be injected by JS -->
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end space-x-2 mb-4 text-custom-green">
+            <a href="apk_progres.html" class="relative p-2 rounded-lg hover:bg-gray-100 transition">
+                <i data-lucide="clipboard-list" class="w-7 h-7"></i>
+            </a>
+            <a href="apk_troli.html" id="cart-icon" class="relative cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition">
+                <i data-lucide="shopping-cart" class="w-7 h-7"></i>
+                <span id="cart-count" class="absolute -top-1 -right-1 bg-custom-red text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+            </a>
+        </div>
+
+        <div class="mb-4">
+            <div class="relative">
+                <input id="search-input" type="text" placeholder="Cari produk..." class="w-full py-3 pl-12 pr-4 bg-gray-200 rounded-full text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-custom-green border-2 border-transparent" />
+                <span class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-xl">🔍</span>
+            </div>
+        </div>
+        
+        <div class="mb-8">
+            <div id="category-container" class="flex space-x-3 overflow-x-auto pb-2">
+                <!-- Tombol kategori akan di-generate oleh JavaScript di sini -->
+            </div>
+        </div>
+
+        <div id="product-list-container" class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <!-- Kartu produk akan di-generate oleh JavaScript di sini -->
+        </div>
+    </div>
+    
+    <!-- Modal Kuantitas/Beli Sekarang -->
+    <div id="item-modal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden flex items-end" onclick="closeModal()">
+        <div id="modal-content" class="bg-white w-full rounded-t-2xl shadow-2xl p-6 transform translate-y-full" onclick="event.stopPropagation()">
+            <!-- Konten modal akan diisi oleh JavaScript -->
+        </div>
+    </div>
+
+<script>
+    const DB_PRODUCTS_KEY = 'gerbangPanganProducts'; // Kunci untuk localStorage
+
+    const MASTER_BANNERS = [
+        { id: 1, image: 'https://placehold.co/1200x400/a5b4fc/1e293b?text=Panen+Raya', alt: 'Banner Panen Raya' },
+        { id: 2, image: 'https://placehold.co/1200x400/86efac/1e293b?text=Diskon+Pupuk', alt: 'Banner Diskon Pupuk' },
+        { id: 3, image: 'https://placehold.co/1200x400/fca5a5/1e293b?text=Produk+Baru', alt: 'Banner Produk Baru' }
+    ];
+
+    const MASTER_CATEGORIES = [
+        { id: 'sayuran', name: 'Sayuran' },
+        { id: 'ikan-daging', name: 'Ikan & Daging' },
+        { id: 'sembako', name: 'Sembako' },
+        { id: 'lainnya', name: 'Lainnya' }
+    ];
+
+    // Variabel global untuk menampung produk yang diambil dari "database"
+    let currentProducts = [];
+
+    const CART_KEY = 'cartItems'; 
+    const PENDING_KEY = 'pendingTransaction'; 
+    let toastTimeout; 
+
+    const formatRupiah = (number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+
+    // --- Simulasi Database ---
+    function initializeDatabase() {
+        // Data Awal (Hanya untuk inisialisasi jika database kosong)
+        const INITIAL_PRODUCTS = [
+            { id: 1, name: 'Ikan Katombo', image: 'https://placehold.co/400x400/a7f3d0/047857?text=IK', stock: 20, unit: 'Kg', threshold: 25, price: 120000, category: 'ikan-daging', origin: 'Kelompok Nelayan Pesisir', dateAdded: '2025-09-27T08:00:00Z' },
+            { id: 2, name: 'Sayur Sawi', image: 'https://placehold.co/400x400/a7f3d0/047857?text=SS', stock: 5, unit: 'Ton', threshold: 10, price: 5000000, category: 'sayuran', origin: 'BUMDes Karya Tani', dateAdded: '2025-09-26T11:20:00Z' },
+            { id: 3, name: 'Bawang Merah', image: 'https://placehold.co/400x400/a7f3d0/047857?text=BM', stock: 100, unit: 'Kg', threshold: 50, price: 30000, category: 'sayuran', origin: 'Kelompok Tani Maju', dateAdded: '2025-09-28T14:30:00Z' },
+            { id: 4, name: 'Daging Ayam', image: 'https://placehold.co/400x400/a7f3d0/047857?text=DA', stock: 0, unit: 'Ekor', threshold: 10, price: 45000, category: 'ikan-daging', origin: 'Peternakan Unggas Sejahtera', dateAdded: '2025-09-25T16:00:00Z' },
+            { id: 5, name: 'Telur Bebek', image: 'https://placehold.co/400x400/a7f3d0/047857?text=TB', stock: 500, unit: 'Butir', threshold: 100, price: 3000, category: 'lainnya', origin: 'Peternakan Unggas Sejahtera', dateAdded: '2025-09-29T09:15:00Z' },
+            { id: 6, name: 'Beras Premium', image: 'https://placehold.co/400x400/a7f3d0/047857?text=BP', stock: 200, unit: 'Kg', threshold: 50, price: 13000, category: 'sembako', origin: 'Kelompok Tani Maju', dateAdded: '2025-09-28T18:00:00Z' },
+            { id: 7, name: 'Pupuk Kompos', image: 'https://placehold.co/400x400/a7f3d0/047857?text=PK', stock: 15, unit: 'Sak', threshold: 20, price: 50000, category: 'lainnya', origin: 'BUMDes Karya Tani', dateAdded: '2025-09-29T10:00:00Z' },
+        ];
+        if (!localStorage.getItem(DB_PRODUCTS_KEY)) {
+            localStorage.setItem(DB_PRODUCTS_KEY, JSON.stringify(INITIAL_PRODUCTS));
+        }
+    }
+
+    function fetchProductsFromDB() {
+        return JSON.parse(localStorage.getItem(DB_PRODUCTS_KEY)) || [];
+    }
+    // --- Akhir Simulasi Database ---
+
+    function showToast(message) {
+        const toast = document.getElementById('toast-notification');
+        const toastMessage = document.getElementById('toast-message');
+        if (toastTimeout) clearTimeout(toastTimeout);
+        
+        toastMessage.textContent = message;
+        toast.classList.add('show');
+        
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000); 
+    }
+
+    function getCartItems() { return JSON.parse(localStorage.getItem(CART_KEY)) || []; }
+    function saveCartToLocalStorage(cartItems) { localStorage.setItem(CART_KEY, JSON.stringify(cartItems)); }
+    function updateCartBadge() {
+        const cartCountElement = document.getElementById('cart-count');
+        const totalItemsInCart = getCartItems().length;
+        cartCountElement.textContent = totalItemsInCart;
+        cartCountElement.classList.toggle('hidden', totalItemsInCart === 0);
+    }
+    
+    function updateCartItems(itemData, quantity) {
+        let cartItems = getCartItems();
+        const uniqueId = itemData.id; 
+        const existingItemIndex = cartItems.findIndex(item => item.id === uniqueId);
+        if (existingItemIndex > -1) {
+            cartItems[existingItemIndex].quantity += quantity;
+        } else {
+            cartItems.push({ ...itemData, quantity: quantity });
+        }
+        saveCartToLocalStorage(cartItems.filter(item => item.quantity > 0));
+        updateCartBadge();
+    }
+    
+    function renderProducts(productsToRender) {
+        const container = document.getElementById('product-list-container');
+        container.innerHTML = '';
+        if(productsToRender.length === 0) {
+            container.innerHTML = `<p class="col-span-2 lg:col-span-4 text-center text-gray-500">Produk tidak ditemukan.</p>`;
+            return;
+        }
+
+        productsToRender.forEach(product => {
+            const isOutOfStock = product.stock <= 0;
+            const cardHtml = `
+                <div class="product-card bg-white rounded-xl shadow-lg p-3 border border-gray-100 flex flex-col ${isOutOfStock ? 'opacity-50' : 'transition duration-300 hover:shadow-xl'}">
+                    <div class="product-image bg-gray-200 h-28 sm:h-32 md:h-40 rounded-lg relative mb-3 overflow-hidden">
+                         <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover">
+                         ${isOutOfStock ? '<div class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white font-bold">HABIS</div>' : ''}
+                    </div>
+                    <div class="flex-grow">
+                        <p class="text-lg font-semibold text-gray-800 mb-1">${product.name}</p>
+                        <p class="text-xl font-bold text-custom-green mb-1">${formatRupiah(product.price)}</p>
+                        <p class="text-xs text-gray-500 mb-4">Harga Per ${product.unit}</p>
+                    </div>
+                    <div class="mt-auto space-y-2">
+                        <button ${isOutOfStock ? 'disabled' : ''} data-id="${product.id}" class="add-to-cart-btn w-full py-2 bg-custom-red text-white font-semibold rounded-xl shadow-md text-sm ${isOutOfStock ? 'cursor-not-allowed bg-gray-400' : 'hover:bg-red-600 transition'}">Tambah Troli 🛒</button>
+                        <button ${isOutOfStock ? 'disabled' : ''} data-id="${product.id}" class="buy-now-btn w-full py-2 bg-custom-green-dark text-white font-semibold rounded-xl shadow-md text-sm ${isOutOfStock ? 'cursor-not-allowed bg-gray-400' : 'hover:bg-green-700 transition'}">Beli Sekarang</button>
+                    </div>
+                </div>`;
+            container.innerHTML += cardHtml;
+        });
+    }
+
+    function openModal(itemData) {
+        let currentQuantity = 1;
+        const modalContent = document.getElementById('modal-content');
+
+        const updateModalDisplay = () => {
+             const canIncrement = currentQuantity < itemData.stock;
+             const canDecrement = currentQuantity > 1;
+             
+             modalContent.innerHTML = `
+                <div class="flex justify-between items-center pb-4">
+                    <div>
+                        <p class="text-lg font-semibold text-gray-800">${itemData.name}</p>
+                        <div class="flex items-baseline space-x-2"> 
+                            <p class="text-xl font-bold text-custom-green">${formatRupiah(itemData.price)}</p>
+                            <p class="text-sm text-gray-500">Per ${itemData.unit}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm font-medium text-gray-500">Stok Tersedia:</span>
+                        <span class="text-base font-bold text-custom-red">${itemData.stock}</span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end space-x-2 mb-6">
+                    <button ${!canDecrement ? 'disabled' : ''} class="decrement-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full font-bold text-xl hover:bg-gray-300 disabled:opacity-50">-</button>
+                    <span class="quantity-display text-xl font-semibold w-8 text-center">${currentQuantity}</span>
+                    <button ${!canIncrement ? 'disabled' : ''} class="increment-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full font-bold text-xl hover:bg-gray-300 disabled:opacity-50">+</button>
+                </div>
+                <button class="lanjut-btn w-full py-3 bg-custom-green-dark text-white font-bold text-lg rounded-xl hover:bg-green-700 shadow-lg">Lanjut</button>`;
+
+            modalContent.querySelector('.increment-btn').onclick = () => { if(canIncrement) { currentQuantity++; updateModalDisplay(); }};
+            modalContent.querySelector('.decrement-btn').onclick = () => { if(canDecrement) { currentQuantity--; updateModalDisplay(); }};
+            modalContent.querySelector('.lanjut-btn').onclick = () => {
+                const transactionItem = [{...itemData, quantity: currentQuantity}];
+                localStorage.setItem(PENDING_KEY, JSON.stringify(transactionItem));
+                window.location.href = 'apk_transaksi.html';
+            };
+        };
+        
+        updateModalDisplay();
+        document.getElementById('item-modal').classList.remove('hidden');
+        requestAnimationFrame(() => modalContent.classList.remove('translate-y-full'));
+    }
+
+    function closeModal() {
+        const modal = document.getElementById('item-modal');
+        const modalContent = document.getElementById('modal-content');
+        modalContent.classList.add('translate-y-full');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function filterAndSearch() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const activeCategory = document.querySelector('.category-btn.active').dataset.category;
+        
+        const filteredProducts = currentProducts.filter(product => {
+            const categoryMatch = activeCategory === 'semua' || product.category === activeCategory;
+            const searchMatch = product.name.toLowerCase().includes(searchTerm);
+            return categoryMatch && searchMatch;
+        });
+        
+        renderProducts(filteredProducts);
+        addCardEventListeners();
+    }
+
+    function addCardEventListeners() {
+        document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+            button.onclick = (event) => {
+                const productId = parseInt(event.currentTarget.dataset.id);
+                const product = currentProducts.find(p => p.id === productId);
+                updateCartItems(product, 1);
+                showToast(`${product.name} ditambahkan!`); // Menggunakan toast baru
+            };
+        });
+
+        document.querySelectorAll('.buy-now-btn').forEach(button => {
+            button.onclick = (event) => {
+                const productId = parseInt(event.currentTarget.dataset.id);
+                const product = currentProducts.find(p => p.id === productId);
+                openModal(product);
+            };
+        });
+    }
+    
+    // --- Banner Slider Logic ---
+    function setupBannerSlider() {
+        const sliderTrack = document.getElementById('slider-track');
+        const sliderDots = document.getElementById('slider-dots');
+        let currentIndex = 0;
+        let slideInterval;
+
+        if (!sliderTrack || !sliderDots) return;
+
+        // 1. Create slides and dots
+        MASTER_BANNERS.forEach((banner, index) => {
+            // Create slide
+            const slide = document.createElement('div');
+            slide.className = 'slide';
+            slide.innerHTML = `<img src="${banner.image}" alt="${banner.alt}" class="w-full h-auto object-cover aspect-[3/1]">`;
+            sliderTrack.appendChild(slide);
+
+            // Create dot
+            const dot = document.createElement('button');
+            dot.className = 'slider-dot';
+            dot.dataset.index = index;
+            sliderDots.appendChild(dot);
+        });
+
+        const dots = document.querySelectorAll('.slider-dot');
+
+        // 2. Function to update slider
+        function updateSlider(index) {
+            sliderTrack.style.transform = `translateX(-${index * 100}%)`;
+            dots.forEach(dot => dot.classList.remove('active'));
+            if(dots[index]) {
+                dots[index].classList.add('active');
+            }
+            currentIndex = index;
+        }
+
+        // 3. Auto-play functionality
+        function startSlideShow() {
+            slideInterval = setInterval(() => {
+                let nextIndex = (currentIndex + 1) % MASTER_BANNERS.length;
+                updateSlider(nextIndex);
+            }, 4000); // Change slide every 4 seconds
+        }
+
+        function stopSlideShow() {
+            clearInterval(slideInterval);
+        }
+
+        // 4. Add event listeners to dots
+        sliderDots.addEventListener('click', (e) => {
+            if (e.target.matches('.slider-dot')) {
+                const index = parseInt(e.target.dataset.index);
+                stopSlideShow();
+                updateSlider(index);
+                startSlideShow();
+            }
+        });
+
+        // Initial setup
+        updateSlider(0);
+        startSlideShow();
+    }
+
+    function populateCategoryFilters() {
+        const container = document.getElementById('category-container');
+        container.innerHTML = ''; // Kosongkan dulu
+
+        // Tambah tombol "Semua"
+        const allBtn = document.createElement('button');
+        allBtn.className = 'category-btn active flex-shrink-0 py-2 px-4 bg-gray-200 text-gray-700 rounded-full text-sm transition';
+        allBtn.dataset.category = 'semua';
+        allBtn.textContent = 'Semua';
+        container.appendChild(allBtn);
+
+        // Tambah tombol dari data master
+        MASTER_CATEGORIES.forEach(category => {
+            const btn = document.createElement('button');
+            btn.className = 'category-btn flex-shrink-0 py-2 px-4 bg-gray-200 text-gray-700 rounded-full text-sm transition';
+            btn.dataset.category = category.id;
+            btn.textContent = category.name;
+            container.appendChild(btn);
+        });
+
+        // Tambahkan event listener ke semua tombol kategori
+        document.querySelectorAll('.category-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelector('.category-btn.active').classList.remove('active');
+                button.classList.add('active');
+                filterAndSearch();
+            });
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        lucide.createIcons();
+        
+        // Inisialisasi dan ambil data dari "database"
+        initializeDatabase();
+        currentProducts = fetchProductsFromDB();
+
+        populateCategoryFilters();
+        setupBannerSlider();
+        updateCartBadge();
+        renderProducts(currentProducts); // Tampilkan semua produk awal
+        addCardEventListeners();
+        
+        document.getElementById('search-input').addEventListener('keyup', filterAndSearch);
+    });
+</script>
+
+</body>
+</html>
